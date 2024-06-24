@@ -1,33 +1,33 @@
 # MultiTimer
 
-## 简介
-MultiTimer 是一个软件定时器扩展模块，可无限扩展你所需的定时器任务，取代传统的标志位判断方式， 更优雅更便捷地管理程序的时间触发时序。
+## Introduction
+MultiTimer is a software timer extension module that allows for the expansion of timer tasks as needed, replacing the traditional flag-checking method. It offers a more elegant and convenient way to manage the timing sequences of a program.
 
-## 使用方法
-1. 配置系统时间基准接口，安装定时器驱动；
+## How to Use
+1. Configure the system time base interface and install the timer driver:
 
 ```c
 uint64_t PlatformTicksGetFunc(void)
 {
-    /* Platform implementation */
+    /* Platform-specific implementation */
 }
 
 multiTimerInstall(PlatformTicksGetFunc);
 ```
 
-2. 实例化一个定时器对象；
+2. Instantiate a timer object:
 
 ```c
 MultiTimer timer1;
 ```
 
-3. 设置定时时间，超时回调处理函数， 用户上下指针，启动定时器；
+3. Set the timing, timeout callback function, user data pointer, and start the timer:
 
 ```c
-int multiTimerStart(&timer1, uint64_t timing, MultiTimerCallback_t callback, void* userData);
+int multiTimerStart(MultiTimer* timer, uint64_t timing, MultiTimerCallback_t callback, void* userData);
 ```
 
-4. 在主循环调用定时器后台处理函数
+4. Call the timer background processing function in the main loop:
 
 ```c
 int main(int argc, char *argv[])
@@ -40,62 +40,65 @@ int main(int argc, char *argv[])
 }
 ```
 
-## 功能限制
-1.定时器的时钟频率直接影响定时器的精确度，尽可能采用1ms/5ms/10ms这几个精度较高的tick;
+## Limitations
+1. The clock frequency of the timer directly affects its accuracy. It is recommended to use ticks with higher precision such as 1ms, 5ms, or 10ms.
 
-2.定时器的回调函数内不应执行耗时操作，否则可能因占用过长的时间，导致其他定时器无法正常超时；
+2. The callback function of the timer should not perform time-consuming operations, as this may occupy too much time, causing other timers to not timeout properly.
 
-3.由于定时器的回调函数是在 multiTimerYield 内执行的，需要注意栈空间的使用不能过大，否则可能会导致栈溢出。
+3. Since the timer's callback function is executed within `multiTimerYield`, care should be taken not to use too much stack space to avoid stack overflow.
 
-## Examples
-
-见example目录下的测试代码，main.c为普通平台测试demo，test_linux.c为linux平台的测试demo。
+## Example
+The `test_linux.c` file serves as a demo for Linux platforms, showcasing how to use MultiTimer for creating and managing multiple timers with different intervals and behaviors.
 
 ```c
-#include <stdio.h>
-#include <sys/time.h>
-#include <time.h>
 #include "MultiTimer.h"
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/time.h>
 
-MultiTimer timer1;
-MultiTimer timer2;
-MultiTimer timer3;
-
-uint64_t PlatformTicksGetFunc(void)
-{
-    struct timespec current_time;
-    clock_gettime(CLOCK_MONOTONIC, &current_time);
-    return (uint64_t)((current_time.tv_sec * 1000) + (current_time.tv_nsec / 1000000));
+// Platform-specific function to get current ticks (milliseconds)
+uint64_t getPlatformTicks() {
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    return now.tv_sec * 1000LL + now.tv_usec / 1000;
 }
 
-void exampleTimer1Callback(MultiTimer* timer, void *userData)
-{
-    printf("exampleTimer1Callback-> %s.\r\n", (char*)userData);
-    multiTimerStart(timer, 1000, exampleTimer1Callback, userData);
+// Callback functions for the timers
+void timerCallback1(MultiTimer* timer, void* userData) {
+    printf("Timer 1 fired at %lu ms\n", getPlatformTicks());
+    multiTimerStart(timer, 500, timerCallback1, NULL); // Restart timer
 }
 
-void exampleTimer2Callback(MultiTimer* timer, void *userData)
-{
-    printf("exampleTimer2Callback-> %s.\r\n", (char*)userData);
+void timerCallback2(MultiTimer* timer, void* userData) {
+    printf("Timer 2 fired at %lu ms\n", getPlatformTicks());
+    multiTimerStart(timer, 1000, timerCallback2, NULL); // Restart timer
 }
 
-void exampleTimer3Callback(MultiTimer* timer, void *userData)
-{
-    printf("exampleTimer3Callback-> %s.\r\n", (char*)userData);
-    multiTimerStart(timer, 4567, exampleTimer3Callback, userData);
+void timerCallback3(MultiTimer* timer, void* userData) {
+    printf("Timer 3 (one-shot) fired at %lu ms\n", getPlatformTicks());
 }
 
-int main(int argc, char *argv[])
-{
-    multiTimerInstall(PlatformTicksGetFunc);
+void timerCallback4(MultiTimer* timer, void* userData) {
+    printf("Timer 4 is stopping Timer 1 at %lu ms\n", getPlatformTicks());
+    multiTimerStop((MultiTimer*)userData);
+}
 
-    multiTimerStart(&timer1, 1000, exampleTimer1Callback, "1000ms CYCLE timer");
-    multiTimerStart(&timer2, 5000, exampleTimer2Callback, "5000ms ONCE timer");
-    multiTimerStart(&timer3, 3456, exampleTimer3Callback, "3456ms delay start, 4567ms CYCLE timer");
+int main() {
+    multiTimerInstall(getPlatformTicks);
 
+    MultiTimer timer1, timer2, timer3, timer4;
+
+    multiTimerStart(&timer1, 500, timerCallback1, NULL); // 500 ms repeating
+    multiTimerStart(&timer2, 1000, timerCallback2, NULL); // 1000 ms repeating
+    multiTimerStart(&timer3, 2000, timerCallback3, NULL); // 2000 ms one-shot
+    multiTimerStart(&timer4, 3000, timerCallback4, &timer1); // 3000 ms, stops timer1
+
+    // Main loop to simulate time passage and process timers
     while (1) {
         multiTimerYield();
+        usleep(1000); // Sleep for 1 ms
     }
+
+    return 0;
 }
 ```
-

@@ -1,65 +1,50 @@
+#include "MultiTimer.h"
 #include <stdio.h>
+#include <unistd.h>
 #include <sys/time.h>
-#include <time.h>
-#include "../MultiTimer.h"
 
-MultiTimer timer1;
-MultiTimer timer2;
-MultiTimer timer3;
-MultiTimer timer4;
-
-uint64_t PlatformTicksGetFunc(void)
-{
-    struct timespec current_time;
-    clock_gettime(CLOCK_MONOTONIC, &current_time);
-    return (uint64_t)((current_time.tv_sec * 1000) + (current_time.tv_nsec / 1000000));
+// Platform-specific function to get current ticks (milliseconds)
+uint64_t getPlatformTicks() {
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    return now.tv_sec * 1000LL + now.tv_usec / 1000;
 }
 
-void exampleTimer1Callback(MultiTimer* timer, void *userData)
-{
-    printf("[%012ld] Timer:%p callback-> %s.\r\n", PlatformTicksGetFunc(), timer, (char*)userData);
-    multiTimerStart(timer, 1000, exampleTimer1Callback, userData);
+// Callback functions for the timers
+void timerCallback1(MultiTimer* timer, void* userData) {
+    printf("Timer 1 fired at %lu ms\n", getPlatformTicks());
+    multiTimerStart(timer, 500, timerCallback1, NULL); // Restart timer
 }
 
-void exampleTimer2Callback(MultiTimer* timer, void *userData)
-{
-    printf("[%012ld] Timer:%p callback-> %s.\r\n", PlatformTicksGetFunc(), timer, (char*)userData);
+void timerCallback2(MultiTimer* timer, void* userData) {
+    printf("Timer 2 fired at %lu ms\n", getPlatformTicks());
+    multiTimerStart(timer, 1000, timerCallback2, NULL); // Restart timer
 }
 
-void exampleTimer3Callback(MultiTimer* timer, void *userData)
-{
-    printf("[%012ld] Timer:%p callback-> %s.\r\n", PlatformTicksGetFunc(), timer, (char*)userData);
-    multiTimerStart(timer, 4567, exampleTimer3Callback, userData);
+void timerCallback3(MultiTimer* timer, void* userData) {
+    printf("Timer 3 (one-shot) fired at %lu ms\n", getPlatformTicks());
 }
 
-typedef struct CustomUserData {
-    int count;
-    char* str;
-} CustomUserData;
-void exampleTimer4Callback(MultiTimer* timer, void *userData)
-{
-    CustomUserData* customUserData = (CustomUserData*)userData;
-    customUserData->count--;
-    printf("[%012ld] Timer:%p callback-> %s.\r\n", PlatformTicksGetFunc(), timer, customUserData->str);
-    if (customUserData->count > 0) {
-        multiTimerStart(timer, 2000, exampleTimer4Callback, customUserData);
-    }
+void timerCallback4(MultiTimer* timer, void* userData) {
+    printf("Timer 4 is stopping Timer 1 at %lu ms\n", getPlatformTicks());
+    multiTimerStop((MultiTimer*)userData);
 }
 
-int main(int argc, char *argv[])
-{
-    multiTimerInstall(PlatformTicksGetFunc);
+int main() {
+    multiTimerInstall(getPlatformTicks);
 
-    multiTimerStart(&timer1, 1000, exampleTimer1Callback, "1000ms CYCLE timer");
-    multiTimerStart(&timer2, 5000, exampleTimer2Callback, "5000ms ONCE timer");
-    multiTimerStart(&timer3, 3456, exampleTimer3Callback, "3456ms delay start, 4567ms CYCLE timer");
-    CustomUserData customUserData = {
-        .count = 3,
-        .str = "2000ms 3 timer"
-    };
-    multiTimerStart(&timer4, 2000, exampleTimer4Callback, &customUserData);
+    MultiTimer timer1, timer2, timer3, timer4;
 
+    multiTimerStart(&timer1, 500, timerCallback1, NULL); // 500 ms repeating
+    multiTimerStart(&timer2, 1000, timerCallback2, NULL); // 1000 ms repeating
+    multiTimerStart(&timer3, 2000, timerCallback3, NULL); // 2000 ms one-shot
+    multiTimerStart(&timer4, 3000, timerCallback4, &timer1); // 3000 ms, stops timer1
+
+    // Main loop to simulate time passage and process timers
     while (1) {
         multiTimerYield();
+        usleep(1000); // Sleep for 1 ms
     }
+
+    return 0;
 }
