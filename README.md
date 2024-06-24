@@ -12,7 +12,7 @@ uint64_t PlatformTicksGetFunc(void)
     /* Platform implementation */
 }
 
-MultiTimerInstall(PlatformTicksGetFunc);
+multiTimerInstall(PlatformTicksGetFunc);
 ```
 
 2. 实例化一个定时器对象；
@@ -24,7 +24,7 @@ MultiTimer timer1;
 3. 设置定时时间，超时回调处理函数， 用户上下指针，启动定时器；
 
 ```c
-int MultiTimerStart(&timer1, uint64_t timing, MultiTimerCallback_t callback, void* userData);
+int multiTimerStart(&timer1, uint64_t timing, MultiTimerCallback_t callback, void* userData);
 ```
 
 4. 在主循环调用定时器后台处理函数
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     ...
     while (1) {
         ...
-        MultiTimerYield();
+        multiTimerYield();
     }
 }
 ```
@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 
 2.定时器的回调函数内不应执行耗时操作，否则可能因占用过长的时间，导致其他定时器无法正常超时；
 
-3.由于定时器的回调函数是在 MultiTimerYield 内执行的，需要注意栈空间的使用不能过大，否则可能会导致栈溢出。
+3.由于定时器的回调函数是在 multiTimerYield 内执行的，需要注意栈空间的使用不能过大，否则可能会导致栈溢出。
 
 ## Examples
 
@@ -71,7 +71,7 @@ uint64_t PlatformTicksGetFunc(void)
 void exampleTimer1Callback(MultiTimer* timer, void *userData)
 {
     printf("exampleTimer1Callback-> %s.\r\n", (char*)userData);
-    MultiTimerStart(timer, 1000, exampleTimer1Callback, userData);
+    multiTimerStart(timer, 1000, exampleTimer1Callback, userData);
 }
 
 void exampleTimer2Callback(MultiTimer* timer, void *userData)
@@ -82,19 +82,19 @@ void exampleTimer2Callback(MultiTimer* timer, void *userData)
 void exampleTimer3Callback(MultiTimer* timer, void *userData)
 {
     printf("exampleTimer3Callback-> %s.\r\n", (char*)userData);
-    MultiTimerStart(timer, 4567, exampleTimer3Callback, userData);
+    multiTimerStart(timer, 4567, exampleTimer3Callback, userData);
 }
 
 int main(int argc, char *argv[])
 {
-    MultiTimerInstall(PlatformTicksGetFunc);
+    multiTimerInstall(PlatformTicksGetFunc);
 
-    MultiTimerStart(&timer1, 1000, exampleTimer1Callback, "1000ms CYCLE timer");
-    MultiTimerStart(&timer2, 5000, exampleTimer2Callback, "5000ms ONCE timer");
-    MultiTimerStart(&timer3, 3456, exampleTimer3Callback, "3456ms delay start, 4567ms CYCLE timer");
+    multiTimerStart(&timer1, 1000, exampleTimer1Callback, "1000ms CYCLE timer");
+    multiTimerStart(&timer2, 5000, exampleTimer2Callback, "5000ms ONCE timer");
+    multiTimerStart(&timer3, 3456, exampleTimer3Callback, "3456ms delay start, 4567ms CYCLE timer");
 
     while (1) {
-        MultiTimerYield();
+        multiTimerYield();
     }
 }
 ```

@@ -48,7 +48,7 @@ struct MultiTimerHandle {
  * @param ticksFunc ticks function.
  * @return int 0 on success, -1 on error.
  */
-int MultiTimerInstall(PlatformTicksFunction_t ticksFunc);
+int multiTimerInstall(PlatformTicksFunction_t ticksFunc);
 
 /**
  * @brief Start the timer work, add the handle into work list.
@@ -59,7 +59,7 @@ int MultiTimerInstall(PlatformTicksFunction_t ticksFunc);
  * @param userData user data.
  * @return int 0: success, -1: fail.
  */
-int MultiTimerStart(MultiTimer* timer, uint64_t timing, MultiTimerCallback_t callback, void* userData);
+int multiTimerStart(MultiTimer* timer, uint64_t timing, MultiTimerCallback_t callback, void* userData);
 
 /**
  * @brief Stop the timer work, remove the handle off work list.
@@ -67,14 +67,14 @@ int MultiTimerStart(MultiTimer* timer, uint64_t timing, MultiTimerCallback_t cal
  * @param timer target handle strcut.
  * @return int 0: success, -1: fail.
  */
-int MultiTimerStop(MultiTimer* timer);
+int multiTimerStop(MultiTimer* timer);
 
 /**
  * @brief Check the timer expried and call callback.
  * 
  * @return int The next timer expires.
  */
-int MultiTimerYield(void);
+int multiTimerYield(void);
 
 #ifdef __cplusplus
 } 

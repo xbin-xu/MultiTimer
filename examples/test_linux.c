@@ -18,7 +18,7 @@ uint64_t PlatformTicksGetFunc(void)
 void exampleTimer1Callback(MultiTimer* timer, void *userData)
 {
     printf("[%012ld] Timer:%p callback-> %s.\r\n", PlatformTicksGetFunc(), timer, (char*)userData);
-    MultiTimerStart(timer, 1000, exampleTimer1Callback, userData);
+    multiTimerStart(timer, 1000, exampleTimer1Callback, userData);
 }
 
 void exampleTimer2Callback(MultiTimer* timer, void *userData)
@@ -29,7 +29,7 @@ void exampleTimer2Callback(MultiTimer* timer, void *userData)
 void exampleTimer3Callback(MultiTimer* timer, void *userData)
 {
     printf("[%012ld] Timer:%p callback-> %s.\r\n", PlatformTicksGetFunc(), timer, (char*)userData);
-    MultiTimerStart(timer, 4567, exampleTimer3Callback, userData);
+    multiTimerStart(timer, 4567, exampleTimer3Callback, userData);
 }
 
 typedef struct CustomUserData {
@@ -42,24 +42,24 @@ void exampleTimer4Callback(MultiTimer* timer, void *userData)
     customUserData->count--;
     printf("[%012ld] Timer:%p callback-> %s.\r\n", PlatformTicksGetFunc(), timer, customUserData->str);
     if (customUserData->count > 0) {
-        MultiTimerStart(timer, 2000, exampleTimer4Callback, customUserData);
+        multiTimerStart(timer, 2000, exampleTimer4Callback, customUserData);
     }
 }
 
 int main(int argc, char *argv[])
 {
-    MultiTimerInstall(PlatformTicksGetFunc);
+    multiTimerInstall(PlatformTicksGetFunc);
 
-    MultiTimerStart(&timer1, 1000, exampleTimer1Callback, "1000ms CYCLE timer");
-    MultiTimerStart(&timer2, 5000, exampleTimer2Callback, "5000ms ONCE timer");
-    MultiTimerStart(&timer3, 3456, exampleTimer3Callback, "3456ms delay start, 4567ms CYCLE timer");
+    multiTimerStart(&timer1, 1000, exampleTimer1Callback, "1000ms CYCLE timer");
+    multiTimerStart(&timer2, 5000, exampleTimer2Callback, "5000ms ONCE timer");
+    multiTimerStart(&timer3, 3456, exampleTimer3Callback, "3456ms delay start, 4567ms CYCLE timer");
     CustomUserData customUserData = {
         .count = 3,
         .str = "2000ms 3 timer"
     };
-    MultiTimerStart(&timer4, 2000, exampleTimer4Callback, &customUserData);
+    multiTimerStart(&timer4, 2000, exampleTimer4Callback, &customUserData);
 
     while (1) {
-        MultiTimerYield();
+        multiTimerYield();
     }
 }

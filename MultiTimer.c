@@ -1,82 +1,66 @@
 #include "MultiTimer.h"
 #include <stdio.h>
 
-/* Timer handle list head. */
 static MultiTimer* timerList = NULL;
-
-/* Timer tick */
 static PlatformTicksFunction_t platformTicksFunction = NULL;
 
-int MultiTimerInstall(PlatformTicksFunction_t ticksFunc)
-{
+int multiTimerInstall(PlatformTicksFunction_t ticksFunc) {
+    if (ticksFunc == NULL) {
+        return -1; // Indicate error if ticksFunc is NULL
+    }
     platformTicksFunction = ticksFunc;
     return 0;
 }
 
-int MultiTimerStart(MultiTimer* timer, uint64_t timing, MultiTimerCallback_t callback, void* userData)
-{
-    if (!timer || !callback ) {
-        return -1;
-    }
-    MultiTimer** nextTimer = &timerList;
-    /* Remove the existing target timer. */
-    for (; *nextTimer; nextTimer = &(*nextTimer)->next) {
-        if (timer == *nextTimer) {
-            *nextTimer = timer->next; /* remove from list */
+static void removeTimer(MultiTimer* timer) {
+    MultiTimer** current = &timerList;
+    while (*current) {
+        if (*current == timer) {
+            *current = timer->next;
             break;
         }
+        current = &(*current)->next;
+    }
+}
+
+int multiTimerStart(MultiTimer* timer, uint64_t timing, MultiTimerCallback_t callback, void* userData) {
+    if (!timer || !callback || platformTicksFunction == NULL) {
+        return -1; // Return error if any parameter is invalid
     }
 
-    /* Init timer. */
+    removeTimer(timer); // Centralize removal logic
+
     timer->deadline = platformTicksFunction() + timing;
     timer->callback = callback;
     timer->userData = userData;
 
-    /* Insert timer. */
-    for (nextTimer = &timerList;; nextTimer = &(*nextTimer)->next) {
-        if (!*nextTimer) {
-            timer->next = NULL;
-            *nextTimer = timer;
-            break;
-        }
-        if (timer->deadline < (*nextTimer)->deadline) {
-            timer->next = *nextTimer;
-            *nextTimer = timer;
-            break;
-        }
+    MultiTimer** current = &timerList;
+    while (*current && ((*current)->deadline < timer->deadline)) {
+        current = &(*current)->next;
     }
+    timer->next = *current;
+    *current = timer;
+
     return 0;
 }
 
-int MultiTimerStop(MultiTimer* timer)
-{
-    MultiTimer** nextTimer = &timerList;
-    /* Find and remove timer. */
-    for (; *nextTimer; nextTimer = &(*nextTimer)->next) {
-        MultiTimer* entry = *nextTimer;
-        if (entry == timer) {
-            *nextTimer = timer->next;
-            break;
-        }
-    }
+int multiTimerStop(MultiTimer* timer) {
+    removeTimer(timer); // Use centralized removal function
     return 0;
 }
 
-int MultiTimerYield(void)
-{
-    MultiTimer* entry = timerList;
-    for (; entry; entry = entry->next) {
-        /* Sorted list, just process with the front part. */
-        if (platformTicksFunction() < entry->deadline) {
-            return (int)(entry->deadline - platformTicksFunction());
-        }
-        /* remove expired timer from list */
-        timerList = entry->next;
+int multiTimerYield(void) {
+    if (platformTicksFunction == NULL) {
+        return -1; // Indicate error if platformTicksFunction is NULL
+    }
+    uint64_t currentTicks = platformTicksFunction();
+    while (timerList && (currentTicks >= timerList->deadline)) {
+        MultiTimer* timer = timerList;
+        timerList = timer->next; // Remove expired timer
 
-        /* call callback */
-        if (entry->callback) {
-            entry->callback(entry, entry->userData);
+        if (timer->callback) {
+            timer->callback(timer, timer->userData); // Execute callback
         }
     }
-    return 0;
+    return timerList ? (int)(timerList->deadline - currentTicks) : 0;
 }
