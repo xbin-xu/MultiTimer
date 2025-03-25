@@ -61,6 +61,7 @@ int multiTimerYield(void) {
         if (timer->callback) {
             timer->callback(timer, timer->userData); // Execute callback
         }
+        currentTicks = platformTicksFunction(); // Update current ticks
     }
     return timerList ? (int)(timerList->deadline - currentTicks) : 0;
 }
