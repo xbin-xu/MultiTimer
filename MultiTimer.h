@@ -70,7 +70,7 @@ int multiTimerStart(MultiTimer* timer, uint64_t timing, MultiTimerCallback_t cal
 int multiTimerStop(MultiTimer* timer);
 
 /**
- * @brief Check the timer expried and call callback.
+ * @brief Check the timer expired and call callback.
  * 
  * @return int The next timer expires.
  */
